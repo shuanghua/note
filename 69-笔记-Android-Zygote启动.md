@@ -24,17 +24,16 @@ Zygote 进程由 init.rc 进程通过 fork + execve 系统调用二进制文件�
 > ServiceContext 其实和 ApplicationContext 的创建更相似, 因为 Service 和 Application 都是没有界面的
 
 - Activity 的启动:
-  
-  ```java
-  void startSpecifiActivityLocked(ActivityRecord r,...){//ActivityManagerService 层代码
-    //检查 Activity 对应的进程是否启动,没有则先启动对应的进程
-    ProcessRecord app = mService.getProcessRecordLocked(r.processName);
-    if(app != null && app.thread != null){//如果应用进程已经启动
-        realStartActivityLocked(r,app,...);//启动Activity
-        return;
-    }
-    mService.startProcessLocked(r.processName,...);
+```
+void startSpecifiActivityLocked(ActivityRecord r,...){//ActivityManagerService 层代码
+  //检查 Activity 对应的进程是否启动,没有则先启动对应的进程
+  ProcessRecord app = mService.getProcessRecordLocked(r.processName);
+  if(app != null && app.thread != null){//如果应用进程已经启动
+      realStartActivityLocked(r,app,...);//启动Activity
+      return;
   }
-  ```
+  mService.startProcessLocked(r.processName,...);
+}
+```
   
   > ActivityManagerService 发送 socket 消息来向 Zygote 发起启动应用进程请求; 收到请求后, zygote 孵化应用进程, 并打开 binder 驱动, 应用进程孵化出来后, zygote 通过 socket 消息再返回所启动的应用进程 pid 给 AMS; 此时应用进程自身初始化完成, 最后应用进程再通过 binder 调用向 AMS 注册自己的 binder 对象(app.thread),完成进程创建; 往后 AMS 和 应用进程就能通过这 binder 对象来进行通信(其中如: 应用进程向 AMS 提交 Appplication 对象; AMS 通知应用进程 bindApplication, AMS 通过 binder 调用应用进程启动具体的 Activity)

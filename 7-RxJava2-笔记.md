@@ -17,7 +17,6 @@ date: 2017-2-25
 当发送过来的数据速度快于处理数据的速度时，就需要用到 Backpressure ，Backpressure 是响应流控制的其中一个方案。
 这里引用了 大神 Jake Warton 的一个例子，[https://realm.io/cn/news/gotocph-jake-wharton-exploring-rxjava2-android/](https://realm.io/cn/news/gotocph-jake-wharton-exploring-rxjava2-android/ "Jake Wharton -rxjava2-android")
 
-![](http://7xrysc.com1.z0.glb.clouddn.com/jake%20wharton.png)
 
 
 <!-- more -->
