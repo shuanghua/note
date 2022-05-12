@@ -1,5 +1,6 @@
 package com.sample.slidedrawerlayout.touch
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -12,7 +13,7 @@ fun switchEvent(e: Int): String {
         1 -> "Up"
         2 -> "Move"
         else -> {
-            "XXXX"
+            "XXXX:$e"
         }
     }
 }
@@ -24,30 +25,36 @@ class TouchViewGroup @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAtt) {
 
     // 如果重写开发者了 down 时, 没有"主动"去调用  onInterceptTouchEvent 和 onTouchEvent 或 super.dispatchTouchEvent(ev) ,
-    // 分发方法只返回 true 或者 false , 则 onInterceptTouchEvent 和 onTouchEvent 就收不到 该事件 和 后续事件
+    // 则分发方法不管返回 true 或者 false , 本 ViewGroup 的 onInterceptTouchEvent 和 onTouchEvent 就收不到 该事件 和 后续事件, 是因为我们覆盖了系统默认分发机制
 
     // 如果重写了 down , 对于 down 没有 "主动"去调用  onInterceptTouchEvent 和 onTouchEvent , 意味 down 没有被本 view 消费掉
     // 同样因为重写而没有调用 super.dispatchTouchEvent(ev) , 系统默认的 down 也就失去了类似先锋探子的身份,  ViewGroup.java 中的就会把后续的第一个事件(也就是 move)作为先锋探子,
 
-    // 先锋探子是一定要进入 onTouchEvent 查看消费情况的, 如果先锋探子自己被 onTouchEvent 消费, 则后续的事件将经过 dispatchTouchEvent 后, 直接传给 onTouchEvent
-    // 对于 super.dispatchTouchEvent(ev) , 当不向下分发先锋探子事件, 则后续的事件默认也不需要分发 ,也就是后续事件不会再经过该分发方法,
-    // dispatchTouchEvent 不被调用, onInterceptTouchEvent 和 onTouchEvent 就更不会被调用
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {//是否把事件传递给 子View , false:不传递,则事件传回 父View,
-        Timber.d("${switchEvent(ev.actionMasked)} -> Touch.dispatchTouchEvent->")
-//        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
-//            return true
-//        }
+    // 重写, 返回 true, 意思是把事件给子 view, 但如果留空没有写分发逻辑 , 意味着该事件丢失分发目标, 子 View 同样收不到事件,  最终就是变成空消耗结束本次事件, 系统将向 Activity 发送下一次事件,
+
+
+    // 是否把事件传递给 子View
+    // 返回 true : 空消费, 不会回传到 activity 结束消费 也不会调用 onTouchEvent 结束;
+
+    // 返回 false : 事件直接按回程机制返回, 也就是回到到 父View 的 onTouchEvent ...  如果其上层父 ViewGroup 都不消费, 则回到 Activity.onTouchEvent
+    // 如果回程时发现有控件的 onTouchEvent 返回 true,  则结束该事件, 并让系统派发后续事件
+    // 一般的为了保持事件下发的完整性, 不推荐重写 dispatchTouchEvent 的返回值, 保留 super.dispatchTouchEvent(ev) 让系统按默认的分发机制
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        Timber.d("${switchEvent(ev.actionMasked)} -> 11111.dispatchTouchEvent->")
         return super.dispatchTouchEvent(ev)
     }
 
-    // 不管拦不拦截 down  , down 都会进入到 onTouchEvent , 如 onTouchEvent 返回 true 消费了 down, 后续的其他事件就不再经过 onInterceptTouchEvent , 而是直接都丢给 onTouchEvent
-    // 如 down 的 onTouchEvent 返回 false 不消费, 则后续的事件都不会再走这个 View 的所有事件方法
-    // [只要截了序列中的某个事件, 后续的事件就都不会在经过 ]
+
+    // 拦截消费
+    // 返回 true, 则直接把该事件传给当前的 onTouchEvent:
+    // 1.如 onTouchEvent 返回 true 消费了 down, 后续事件在 dispatchTouchEvent 后直接都丢给 onTouchEvent ,不经过该 ViewGroup 的 onInterceptTouchEvent
+
+    // 拦截不消费:
+    // 如 onTouchEvent 返回 false 不消费, 该事件直接从该控件向上传递, 如果在向上传递过程中都没有发现可以消费, 最终回到 Activity 的 onTouchEvent 消费, 并且后续的事件都不会再走这个 View 的所有事件方法
+    // 但如果在回程的路上发现有一个 父View 可以消费该事件, 则后续的事件按正常事件分发(dispatchTouchEvent)处理机制, 看 onenote 笔记图 或者 1.
+    // 所以当使用拦截不消费的时候, 一定需要考虑后续事件的情况
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        Timber.d("${switchEvent(ev.actionMasked)} -> Touch.onInterceptTouchEvent->")
-//        if (ev.actionMasked == MotionEvent.ACTION_MOVE) {
-//            return true
-//        }
+        Timber.d("${switchEvent(ev.actionMasked)} -> 11111.onInterceptTouchEvent->")
         return super.onInterceptTouchEvent(ev)
     }
 
@@ -67,48 +74,57 @@ class TouchViewGroup @JvmOverloads constructor(
     // 如果 down 遇到 onTouchEvent 返回 false ,则后续的事件都不会再经过该 View 的 dispatchTouchEvent , onInterceptTouchEvent, onTouchEvent,
     // 如果整个 View 树的 onTouchEvent 都不返回 true ,则交给 Activity 的 onTouchEvent
 
-    // onTouch 返回值决定 onTouchEvent 能不能被调用 , onTouch 返回 true 则不调用
+    // (onTouch > onTouchEvent > onClick)
+    // onTouch 返回值决定 onTouchEvent 能不能被调用 , onTouch 返回 true 则不调用 onTouchEvent 
     // super.onTouchEvent(ev) 决定 onClick 能不能被调用
-    // 先锋事件被消费, 则后续的事件都会经过 onTouchEvent , 如果先锋事件不被消费, 则后续的事件都不会经过该 view ( dispatchTouchEvent , onInterceptTouchEvent, onTouchEvent 不会被调用了 )
+    // 当前事件进入 onTouchEvent 返回 true 被消费, 则后续的事件都会经过 onTouchEvent , 
+    //如果当前事件不被消费(最终被Activity消费), 则后续的事件都不会经过该 view 的( dispatchTouchEvent , onInterceptTouchEvent, onTouchEvent 不会被调用了 ), 这其实是按事件正常分发传递机制决定的
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        Timber.d("${switchEvent(ev.actionMasked)} -> Touch.onTouchEvent")
-
-//        if (ev.actionMasked == MotionEvent.ACTION_MOVE) {
-//            Timber.d("${switchEvent(ev.actionMasked)} -> Touch.onTouchEvent")
-//            return true
-//        }
-//        if (ev.actionMasked == MotionEvent.ACTION_UP) {
-//            Timber.d("${switchEvent(ev.actionMasked)} -> Touch.onTouchEvent")
-//            return false
-//        }
-        //super.onTouchEvent(ev)  //后面返回 true, 才可以生效以调用 onClick ,
-        return super.onTouchEvent(ev)
+        Timber.d("${switchEvent(ev.actionMasked)} -> 11111.onTouchEvent")
+        //super.onTouchEvent(ev)         // 后面返回 true, 才可以生效以调用 onClick ,
+        return super.onTouchEvent(ev)   // 由系统决定, 系统默认根据 setOnTouchListener 或者 setOnClick 来决定
     }
 }
 
 // 默认分发情况下, 不拦截 down , down 默认进入 onTouchEvent , 也不消费 down , 则后续的 move 和 up 都不会再经过这个 view
+// 如果你的 view 想接收到某一个事件的后续事件, 则一定要消费该事件 (onTouchEvent 返回 true) , 不然后续事件就不再经过你的 view ,
+// 且如果整个 view 树都不消费当前事件, 则该事件的后续所有事件都不再经过 View , 而是直接给 Activity.onTouchEvent 处理
 
 // 如果 setOnTouchListener 的 onTouch-> false 时, 意味着, 当 down 事件发送到当前 TextView 的 onTouch, down 遇到你设置的是 false ,
-// 也就是开发者的你不打算理会 down, down 就转身和 onClick 在一起了, 之后的 move 和 up 也不会再经过你的 setOnTouchListener 中的 onTouch,
-// 因为你告诉系统你作为开发者你不打算消费这个事件, 你只要消费了Down , 系统才会给你发后续的其他事件.
+// down 就会找到 onTouchEvent , 如果 onTouchEvent 返回 super.onTouchEvent(ev), down 可以 onClick 在一起了, 之后的 move 和 up 也不会再经过你的 setOnTouchListener 中的 onTouch,
+// 因为你告诉系统你作为开发者你不打算消费这个事件, 你只要消费了 Down , 系统才会给你发后续的其他事件.
 
-// 默认不消费整个事件流程:
+// 默认不消费事件流程:
 // 父分发 -> 父拦截 -> 父分发 -> 父拦截 -> 被触摸的子View分发 -> 被触摸的子View.onTouchEvent -> 父View.onTouchEvent -> 父View.onTouchEvent -> Activity.OnTouchEvent
 // (dispatchTouchEvent , onInterceptTouchEvent) -> (dispatchTouchEvent , onInterceptTouchEvent) -> (dispatchTouchEvent, onTouchEvent) -> onTouchEvent -> onTouchEvent
-//      ViewGroup1                                                ViewGroup2                                    View                       ViewGroup1      ViewGroup1
+//      ViewGroup1                                                ViewGroup2                                    View(没有拦截方法)                       ViewGroup1      ViewGroup1
 
-// 如果 View 树中都不消费先锋事件,最终被 Activity 消费, 则后续的事件沿最短路径到达 Activity.onTouchEvent
+// onClick 在 up 消费结束后才调用
+// 系统的默认处理事件: onTouch 决定 onTouchEvent 是否能被调用, onTouchEvent 决定 onClick
+// 对于前一个事件, 如果 View 树中都不消费, 则后续的事件不再经过 view 树, 而是直接给 Activity.onTouchEvent 消费
+// 只有被触摸到的 view 或 ViewGroup 才能收到事件,  两个重叠的 View, 则最离根部最远的 view 获得 (这是由事件的传递顺序决定的, 在回路上看先碰到哪个 View 的 onTouchEvent-true)
+// 如果 ViewGroup2 消费了 down , 则后续的事件沿最短下发路径进入 ViewGroup2.dispatchTouchEvent -> ViewGroup2.onTouchEvent (注意这里不经过 ViewGroup2.onInterceptTouchEvent)
 
-// ViewGroup1 ViewGroup2 View: 如果 ViewGroup2 消费了 down:
-// (dispatchTouchEvent , onInterceptTouchEvent) -> (dispatchTouchEvent , onInterceptTouchEvent) -> (dispatchTouchEvent, onTouchEvent)
-
-
-// 如果 ViewGroup2 消费了 down , 则后续的事件沿最短下发路径进入 ViewGroup2.onTouchEvent, 也就是:
-// 此时后续事件: (dispatchTouchEvent , onInterceptTouchEvent) -> (dispatchTouchEvent , onInterceptTouchEvent , onTouchEvent)
-
-
-// 只有被触摸到的 view 或 ViewGroup 才能收到事件,  如果 ViewGroup 重叠, 则两个 ViewGroup 都能收到事件; 如果是两个重叠的 View, 则最离根部最远的 view 获得
 
 // 事件在回程的时候检查消费情况, 当发现有能消费的他的 View 或 ViewGroup, 则后续的事件在去路的时候直接就进入该 View 的 onTouchEvent
+// 事件在去路进入 onTouchEvent 后, 如发现不能被消费, 则直接调用 Activity.onTouchEvent 消费该事件, 然后发下一个事件.
 
-// 事件在去路的时候进入 onTouchEvent ,如果发现不能消费,则直接调用 Activity.onTouchEvent
+
+// 空消费(事件不用进入 onTouchEvent 结束消费, 也不会回传到 activity 结束消费), 如重写 dispatchTouchEvent 返回 true , 但没有说明分发给哪个子 view 时就会发生,
+// 如果某一个事件是空消费, 并不影响后续其他类型事件,但会影响事件序列的完整性
+// 如 onClick 点击事件 (down - up ) 如果其中某一个事件出现了空消耗, 对于系统的 onClick 逻辑而言, 意味事件序列不完整, onClik 不会被调用
+// onClick 是在 up 后被调用
+
+
+// 对于触摸来说, down 是所有事件的起始事件, 如果你 onTouchEvent 不消费 down , 那么你 onTouchEvent 将收不到后续事件...
+// 如果你是 ViewGroup , 且你的子 View 消费了 down , 则你的 dispatchTouchEvent , onInterceptTouchEvent 还是能收到后续事件,
+// 因为后续事件下发到 子View, 必须要经过 父View 的 dispatchTouchEvent 和 onInterceptTouchEvent
+
+
+// 滑动冲突,假设外层 RecyclerView 是竖直滚动, 里面的 ViewPager 是横向滑动
+// 环境:
+// 都是 ViewGroup 且重叠: 所以默认 ViewPager 的 onTouchEvent 会先收到 Down 且消费 Down
+// 我们希望 水平距离 > 竖直距离的时候, 允许 ViewPager 滑 , 也就是 ViewPager获得 move 事件, 相反就是 RecyclerView 获得事件
+// 我们重写外层的 RecyclerView 的 onInterceptTouchEvent 方法, 在 down 的时候记录按下坐标 , 然后默认返回, 在 move 时计算距离(因为 RecyclerView 在外层,RecyclerView 的 dispatchTouchEvent , onInterceptTouchEvent 还是会收到后续事件)
+// 当水平 > 竖直时, 我们就不能让 RecyclerView 消费 move 事件; 当 水平 < 竖直时, 让 RecyclerView 消费 move 事件
