@@ -122,9 +122,13 @@ class TouchViewGroup @JvmOverloads constructor(
 // 因为后续事件下发到 子View, 必须要经过 父View 的 dispatchTouchEvent 和 onInterceptTouchEvent
 
 
-// 滑动冲突,假设外层 RecyclerView 是竖直滚动, 里面的 ViewPager 是横向滑动
-// 环境:
-// 都是 ViewGroup 且重叠: 所以默认 ViewPager 的 onTouchEvent 会先收到 Down 且消费 Down
-// 我们希望 水平距离 > 竖直距离的时候, 允许 ViewPager 滑 , 也就是 ViewPager获得 move 事件, 相反就是 RecyclerView 获得事件
-// 我们重写外层的 RecyclerView 的 onInterceptTouchEvent 方法, 在 down 的时候记录按下坐标 , 然后默认返回, 在 move 时计算距离(因为 RecyclerView 在外层,RecyclerView 的 dispatchTouchEvent , onInterceptTouchEvent 还是会收到后续事件)
-// 当水平 > 竖直时, 我们就不能让 RecyclerView 消费 move 事件; 当 水平 < 竖直时, 让 RecyclerView 消费 move 事件
+// 滑动冲突, , 外 ViewPager 是横向滑动, 里面的 RecyclerView 也是横向滑动
+// 对于 down 事件正常分发传递, 被 RecyclerView 消费, 按正常情况后续的事件也应该给 RecyclerView
+// 但由于 ViewPager 的源码实现是在拦截方法中对 move 返回 true 进行拦截, 结果就是导致 RecyclerView 获取不到 move,  RecyclerView 的事件序列被破坏导致 RecyclerView 和 ViewPager 事件序列都不完整
+
+
+
+
+
+
+
