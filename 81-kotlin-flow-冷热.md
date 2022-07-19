@@ -43,7 +43,7 @@ shareIn 可以把冷流转换为共享流
 ```kotlin
 private val externalScope: CoroutineScope
 val name: Flow<List<Dog>> = flow {
-        ...
+        //...
     }.shareIn(
         externalScope,
         replay = 1,
@@ -74,7 +74,11 @@ _uiState = MutableStateFlow(UiState.Success(emptyList()))
 
 在 Android 中，StateFlow 非常适合需要让可变状态保持可观察的类，可以是 Ui 状态也可以是请求网络数据的状态。
 
-StateFlow 和 LiveData 很像，内部都有一个 value 来更新数据，消费的一方和生产放都是相互独立的，LiveData 能自动根据 view 的生命周期来取消和绑定消费方； StateFlow 的消费方只能放在 repeatOnLifecycle(Lifecycle.State.STARTED) 之类的感知块中来避免内存泄漏，Flow 的另一个优点是其提供了很多处理数据的操作符。
+StateFlow 和 LiveData 很像，内部都有一个 value 来更新数据，消费的一方和生产放都是相互独立的，
+LiveData 能自动根据 view 的生命周期来取消和绑定消费方； 
+StateFlow 的消费方只能放在 repeatOnLifecycle(Lifecycle.State.STARTED) 之类的感知块中来避免内存泄漏
+
+Flow 的另一个优点是其提供了很多处理数据的操作符。
 
 tateIn 中间运算符可以将其他的数据流转换为 StateFlow
 

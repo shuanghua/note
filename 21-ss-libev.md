@@ -121,6 +121,7 @@ yum install git wget vim -y
   "method": "chacha20-ietf-poly1305",
   "timeout": 600,
   "no_delay": true,
+  "fast_open":false,
   "mode": "tcp_and_udp"
   }
   ```
@@ -138,7 +139,7 @@ yum install git wget vim -y
   systemctl start firewalld  //如果这一步执行后卡住, 不用管它,Ctrl+C 结束跳过, 千万不要重启 vps, 等后面端口添加完成之后再重启 vps 即可运行 firewalld
   ```
 
-- 有的 vps 可能没有预装 firewalld ，请先安装再执行上面命令
+- 有的 vps 可能没有预装 firewalld ，请先执行下面安装 firewalld 后, 再执行上面命令
   
   ```bash
   yum install firewalld -y
@@ -151,9 +152,9 @@ yum install git wget vim -y
   firewall-cmd --permanent --zone=public --add-port=你的端口号/udp
   ```
   
-  **注意：如果你的 ssh 登录的端口不是默认的 22 ,一定要再把你的 ssh 端口也添加上去, 不然你将不能通过 shell 工具登录你的 VPS。如果还有 ftp 端口也一样要添加。**
+  **注意：如果你的 ssh 登录的端口不是默认的 22 ,一定要再把你的 ssh 端口也添加上去, 不然你将不能通过 shell 工具登录你的 VPS**
 
-- 所有端口添加完成后需要刷新下 ssh 服务
+- ssh端口添加完成后需要刷新下 ssh 服务
   
   ```
   systemctl restart sshd.service
@@ -185,7 +186,7 @@ yum install git wget vim -y
 
 # 运行 ss-libev
 
-到此已经完成所有安装，启动 ss 有两种方式，第一种是通过配置文件 ss-server -c ,另 一种是命令 api 的方式 ss-server -s ；这里推荐使用配置文件的的方式启动。
+到此已经完成所有安装，启动 ss 有两种方式，第一种是通过配置文件 ss-server -c ,另 一种是命令 api 的方式 ss-server -s ；前面我们已经创建好了配置文件, 所以这里使用配置文件的的方式启动。
 
 - 通过使用上面我们创建好的配置文件来启动
   
@@ -193,9 +194,7 @@ yum install git wget vim -y
   ss-server -c /etc/shadowsocks-libev/config.json
   ```
 
-如果上面你的端口已经在防火墙开放了，密码也设置好了；不出意外应该可以遨游世界了。。
-
-> 为了避免后续设置开机自启 service 文件可能出现问题，请暂时先**不要**通过 ss-server -s 命令启动
+如果上面你的端口已经在防火墙开放了，密码也设置好了；不出意外应该可以遨游世界了。
 
 # 配置开机自启
 
@@ -209,7 +208,7 @@ yum install git wget vim -y
   
   ```
   [Unit]
-  Description=Shadowsocks Server
+  Description=shadowsocks-libev start service
   After=network.target
   [Service]
   ExecStart=/usr/bin/ss-server -c /etc/shadowsocks-libev/config.json
@@ -218,7 +217,7 @@ yum install git wget vim -y
   WantedBy=multi-user.target
   ```
   
-  注意 ss-server 所在的路径（有的安装完成后是在 /usr/local/bin/ 下），避免出现找不到 ss-server 文件的情况。
+  注意 ss-server 所在的路径 (有的 linux 系统安装 ss-libev 后是在 /usr/local/bin/ 下)
 
 - 运行该自启服务
   
@@ -256,6 +255,14 @@ yum install git wget vim -y
   ```
   systemctl status ss
   ```
+
+- 如果 status 显示运行失败, 执行以下命令检查出错原因
+  
+  ```
+  journalctl -u ss
+  ```
+  
+  
 * 如果重启之后，显示 active running，但是客户端依然连接不上，这种情况有可能是开放端口的问题，请尝试文章前面的端口设置部分，尝试更换端口号，同时务必记得向防火墙开放该端口号。
 
 * 如果重启之后，显示的红色，可能是配置文件的格式没有配置正确，或者相关插件配置错误，请仔细查看 Error 部分的日志确定问题所在，比如插件所在的目录，插件的可执行行权限是否正确。
