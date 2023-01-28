@@ -61,7 +61,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags "full"
   ```
 
 ```
-上面的配置必须是对应的 "remote_addr": "127.0.0.1",  "remote_port": 80 对应 Caddyfile里面的 127.0.0.1:80
+上面配置中 "remote_addr": "127.0.0.1" 和 "remote_port": 80 必须对应 Caddyfile 里面（下面）的 127.0.0.1:80
 ```
 
 ```
@@ -72,7 +72,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags "full"
 ```
 
 ```
-"fallback_port": 1234 和 "fallback_addr": "yourdomain.com" 对应 yourdomain.com:1234，同时注意 fallback_addr 的域名尽量上 tls
+"fallback_port": 1234 和 "fallback_addr": "yourdomain.com" 对应 yourdomain.com:1234，同时注意 fallback_addr 的域名尽量开启支持 tls
 ```
 
 ```

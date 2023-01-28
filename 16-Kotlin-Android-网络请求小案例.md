@@ -223,7 +223,3 @@ class MainActivity : AppCompatActivity() {
 
 
 ```
-
-# 附加
-- 本次代码中没有使用 Anko (Kotlin 开发 Android 最强大的框架)
-- 代码托管 [https://github.com/Shuanghua/KAndroidDemo](https://github.com/Shuanghua/KAndroidDemo "GitHub")

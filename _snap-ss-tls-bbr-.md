@@ -145,8 +145,8 @@ cd ..
 ```bash
 curl https://get.acme.sh | sh
 ~/.acme.sh/acme.sh --register-account -m shhua17@gmail.com
-export CF_Email="moshuanghua17@gmail.com"
-export CF_Key="9c4170bac1f2e17d37e893b1b9900bf143a03"
+export CF_Email=""
+export CF_Key=""
 ~/.acme.sh/acme.sh --issue --dns dns_cf -d samstring.com --force
 ```
 
