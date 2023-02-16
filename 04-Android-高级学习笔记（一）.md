@@ -37,7 +37,7 @@ date: 2016-5-19
 
 # 四、 自定义 Binder
 1. 创建  AIDL 必须继承 IInterface，IInterface 负责判断是否是同一个进程，是同一个进程返回真实对象，不是同一个进程返回 Binder 代理对象。
-2. 创建一个 Class 继承 IBinder 并实现 AIDL。
+2. 创建一个 Class 继承 IBinder 并实现 AIDL 接口。
 
 
 # 五、Binder 进程异常

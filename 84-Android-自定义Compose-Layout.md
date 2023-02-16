@@ -36,7 +36,7 @@ fun CustomColumLayout(
 ```
 
 
-### 调用 layout 函数进行放置元素 (这里的 layout() 是 MeasureScope 接口下的)
+### 调用小 layout 函数进行放置元素 (这里的 layout() 是 MeasureScope 接口下的)
 ```kotlin
 @Composable
 fun CustomColumLayout(
@@ -73,7 +73,7 @@ fun CustomColumLayout(
 ```kotlin
 fun Modifier.expandModifier(
     firstBaselineToTop: Dp
-) = layout { measurable, constraints ->
+    ) = this.layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
     val firstBaseline = placeable[FirstBaseline]
 
