@@ -15,6 +15,7 @@ date: 2019-2-6
 Kotlin let apply run with 系列总结
 
 ```kotlin
+//=====================以下类似 map 返回转换后的结果==================
 
 // 需要修改调用者，并返回另一个对象时 （要求 Lambda 最后一行是可返回的）
 inline fun <T, R> T.let(block: (T) -> R): R {
@@ -39,8 +40,8 @@ inline fun <R> run(block: () -> R): R {
     return block()
 }
 
-//=========================以上类似 map 返回转换后的结果======================
 
+//=========================范围======================
 
 // 需要直接对调用者进行修改或者需要在代码快中使用调用者，并返回修改后的调用者
 inline fun <T> T.also(block: (T) -> Unit): T {
@@ -53,6 +54,10 @@ inline fun <T> T.apply(block: T.() -> Unit): T {
     block()
     return this
 }
+
+
+
+//=========================判断======================
 
 // 用于判断布尔类型，只有为 true 才继续向下调用，然后返回调用者，否则返回 null
 inline fun <T> T.takeIf(predicate: (T) -> Boolean): T? {
