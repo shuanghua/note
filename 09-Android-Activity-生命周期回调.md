@@ -64,10 +64,12 @@ date: 2017-4-3
 
 当从在第三个 Activity 按返回时：
 onPause （C）
+
 onRestart (A)
 onStart (A)
 onResume (A)
 onPostResume (A)
+
 onStop (C)
 onDestroy (C)
 

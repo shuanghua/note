@@ -22,14 +22,14 @@ inline fun <T, R> T.let(block: (T) -> R): R {
     return block(this)
 }
 
-// 显式传入实例，然后扩展该实例，返回另一个实例
-inline fun <T, R> with(receiver: T, block: T.() -> R): R {
-    return receiver.block()
-}
-
 // 修改调用者里面的方法或对象，返回非调用者对象 （要求 Lambda 最后一行是可返回的）
 inline fun <T, R> T.run(block: T.() -> R): R {
     return block()
+}
+
+// 显式传入实例，然后扩展该实例，返回另一个实例
+inline fun <T, R> with(receiver: T, block: T.() -> R): R {
+    return receiver.block()
 }
 
 // 传入一个函数，返回函数的结果（就是方便使用 lambda 函数）
