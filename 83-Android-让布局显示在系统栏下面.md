@@ -1,4 +1,4 @@
-1 . style 或者 theme 中设置
+### 1 . style 或者 theme 中设置
 
 状态栏透明 + 取消默认ActionBar + Window标题
 
@@ -10,7 +10,7 @@
 
 
 
-2.利用设置了WindowInsets的布局
+### 2.利用设置了WindowInsets的布局
 
 比如 CoordinatorLayout 或 AppBarLayout 或 DrawerLayout 等内部监听设置了 WindowInsets systembar 的布局, 然后在该布局中设置
 
@@ -20,7 +20,7 @@ android:fitsSystemWindows="true"
 
 
 
-3.自定义布局监听WindowInsets
+### 3.自定义布局监听WindowInsets
 
 ```kotlin
 if (ViewCompat.getFitsSystemWindows(this)) {

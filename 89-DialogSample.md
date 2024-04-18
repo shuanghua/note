@@ -1,3 +1,4 @@
+### 1 创建
 ```kotlin
 import android.app.Dialog
 import android.content.DialogInterface
@@ -33,7 +34,7 @@ class StartGameDialogFragment : DialogFragment() {
 ```
 
 
-# 2
+### 2 使用
 ```kotlin
 val builder: AlertDialog.Builder? = activity?.let {
     AlertDialog.Builder(it)
