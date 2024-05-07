@@ -41,6 +41,7 @@ view 的 invalidate() 操作会进入到 ViewRootImpl 的 requestLayout() 方法
 > Choreographer 每次都要重新注册 Vsync 信号.  因为有时候 View 是静止不变的,这时候不需要一直监听 Vsync 信号,  而是等待 View 的状态发生变化, 然后再重新注册 Vsync 信号.
 
 
+## 1. 检查线程 + 发送同步屏障消息
 ```java
 // ViewRootImpl.java
 class ViewRootImpl {
@@ -63,7 +64,12 @@ class ViewRootImpl {
                     Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
         }
     }
+```
 
+
+## 2. 将本次要测绘操作放入队列 + 订阅 Vsync 信号
+```java
+class Choreographer {
     // 将 View 刷新操作存入队列 + 订阅 Vsync 信号 ( Choreographer.java )
     private void postCallbackDelayedInternal(){
         mCallbackQueues[callbackType].addCallbackLocked(dueTime, action, token); // 加入队列
@@ -80,23 +86,31 @@ class ViewRootImpl {
             mHandler.sendMessageAtFrontOfQueue(msg);
         }
     }
+}
+```
 
-    // 将 View 刷新操作取出执行 ( Choreographer.java )
-    class FrameDisplayEventReceiver extends DisplayEventReceiver implements Runnable {
+## 3. 收到 Vsync 信号 + 切换到主线程
+```java
+class Choreographer {
+    class FrameDisplayEventReceiver extends DisplayEventReceiver 
+        implements Runnable {
         // 收到 Vsync 信号后, 通过 Handler 执行自己的 run() 方法
         public void onVsync(long timestamp, int builtInDisplayId) {
                 Message msg = Message.obtain(mHandler, this);
-                msg.setAsynchronous(true); // 将该消息设置为异步, 消息队列发现存在同步屏障消息后, 会优先执行异步消息, 从而让 View 刷新操作优先执行
+                // 将该消息设置为异步, 消息队列发现存在同步屏障消息后, 会优先执行异步消息, 
+                // 从而让 View 刷新操作优先执行
+                msg.setAsynchronous(true); 
                 mHandler.sendMessageAtTime(msg, timestampNanos / TimeUtils.NANOS_PER_MS);
         }
 
+        // Ui 线程-将 View 刷新操作取出执行
         public void run() {
             mHavePendingVsync = false;
             doFrame(mTimestampNanos, mFrame, mLastVsyncEventData);
         }
     }
 
-    // 将 View 刷新操作取出执行 ( Choreographer.java )
+    // 将 View 刷新操作取出执行
     void doFrame(){
         // 事件输入
         mFrameInfo.markInputHandlingStart();
@@ -113,15 +127,24 @@ class ViewRootImpl {
 
         doCallbacks(Choreographer.CALLBACK_COMMIT, frameIntervalNanos);
     }
+}
+```
 
-    //  将 View 刷新操作取出执行 ( Choreographer.java )
+
+## 4. 在主线程执行 View 的刷新绘制
+```java
+class Choreographer {
     void doCallbacks(int callbackType, long frameIntervalNanos) {
         for (CallbackRecord c = callbacks; c != null; c = c.next) {
-            c.run(mFrameData); //  将 View 刷新操作取出执行
+            c.run(mFrameData); //  在 ui 线程取出 View 刷新操作并执行
         }
     }
+}
+```
 
-    // View 的刷新绘制 ( ViewRootImpl.java )
+```java
+class ViewRootImpl {
+    // 最终回到 ViewRootImpl 调用 View 的刷新绘制
     final class TraversalRunnable implements Runnable {
         public void run() {
             doTraversal();
