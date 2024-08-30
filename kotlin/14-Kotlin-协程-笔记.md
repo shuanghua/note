@@ -17,9 +17,9 @@ date: 2017-8-27
 - 在协程中可以使用线程
 - 协程可以暂停、停止和恢复。
 - 协程通过‘挂起函数’来支持，通常使用匿名的挂起函数。（如：suspend 修饰的 Lambda 表达式）
-- 协程挂起和调度非常的轻量，但协程的创建需要一定的开销, 启动协程比启动线程更慢.
+- 协程挂起和调度非常的轻量，但协程的创建需要一定的开销, 所以如非必要, 尽量不要在一个协程中再次启动另一个协程, 启动协程比启动线程更慢.
 
-> 协同程序完全是通过编译技术实现（不需要 VM 或 OS 端的支持），并且通过代码转换进行暂停。基本上，每个挂起函数转换为状态机，其中状态对应于挂起调用。在暂停之前，下一个状态存储在编译器生成类的相关的局部变量字段中。在恢复该协程后，恢复局部变量并且状态机在暂停后立即从状态继续
+> 协同程序完全是通过编译技术实现（不需要 VM 或 OS 端的支持），并且通过代码转换进行暂停。主要就是将每个挂起函数转换为状态机，其中状态对应于挂起调用。在暂停之前，下一个状态存储在编译器生成类的相关的局部变量字段中。在恢复该协程后，恢复局部变量并且状态机在暂停后立即从状态继续
 
 ---
 
@@ -112,7 +112,7 @@ fun start( block: suspend () -> Unit) {
 > 创建 Continuation，需要一个 CoroutineContext，也就是通常说的 **协程上下文**。
 
 - 定义一个 **MyContinuation** 类，并实现 Continuation<T> 这个接口，重写相应变量和函数。
-```Kotlin
+```kotlin
 class MyContinuation() : Continuation<T> {
 
   override val context: CoroutineContext
@@ -150,7 +150,7 @@ fun download(url: String): T {
 > 通过 suspendCoroutine< T > 函数来获取我们的上面定义的 MyContinuation 实例，然后利用该实例调用 MyContinuation 里面的两个函数，最后将数据传出。
 
 - 通过 continuation 传输数据
-```Kotlin
+```kotlin
 suspend fun <T> work(block: () -> T) = suspendCoroutine<T> {
   continuation -> continuation.resume(block()) //将最终结果传给上面的 resume()
 }
@@ -162,7 +162,7 @@ suspend fun <T> work(block: () -> T) = suspendCoroutine<T> {
 
 ## 使用协程
 使用我们上面写的协程
-```Kotlin
+```kotlin
 fun main(args: Array<String>) {
     start {
         work {
@@ -199,7 +199,7 @@ urlContext 用来携带 url 地址用的，threadContext 就是我们的后台�
 
 
 - 协程的出口 MyContinuation
-```Kotlin
+```kotlin
 class MyContinuation(override val context: CoroutineContext = EmptyCoroutineContext) : Continuation<Unit> {
 
     override fun resume(value: Unit) {
@@ -217,7 +217,7 @@ urlContext 是一个默认为空的协程上下文，AsyncContext() 是利用线
 
 ## 定义 UrlContext
 - 继承 AbstractCoroutineContextElement(Key)
-```Kotlin
+```kotlin
 class UrlContext(val url: String) : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<UrlContext>
 }
@@ -226,7 +226,7 @@ class UrlContext(val url: String) : AbstractCoroutineContextElement(Key) {
 
 ## 定义 AsyncContext
 - 同样继承 AbstractCoroutineContextElement（Key）
-```Kotlin
+```kotlin
 class AsyncContext : AbstractCoroutineContextElement(Key) {
   companion object Key : CoroutineContext.Key<AsyncContext>
 }
@@ -244,7 +244,7 @@ private val myThreadPool by lazy {
 
 ## 封装到 work 中
 > 想要在 suspendCoroutine 函数获取我们的 CoroutineContext,就需要一个 CoroutineContext 的 Receiver （扩展）
-```Kotlin
+```kotlin
 suspend fun <T> workForAsync(block: CoroutineContext.() -> T) = suspendCoroutine<T> { continuation ->
     AsyncTaskThreadPool {
         continuation.resume(block(continuation.context)) // 不扩展的话，这里用不了 continuation.context
@@ -256,7 +256,7 @@ suspend fun <T> workForAsync(block: CoroutineContext.() -> T) = suspendCoroutine
 
 ## 主函数调用
 - 调用
-```Kotlin
+```kotlin
 fun main(args: Array<String>) {
     val url = "www.google.com"
     start(UrlContext(url)) {
@@ -288,7 +288,7 @@ I/System.out: start:pool-1-thread-1，s = 结果 // 10秒后打印
 > 上面将数据丢给 resume() 没有做线程切换，如果我们要在 Android 中将最终的数据传给到 UI 线程，那么就必须在 resume() 函数中做切换。这种线程之间传递数据的事，Kotlin 协程不会帮我们做，（这协程要你来有何用？）所以我们最终还是得自己写 Handler。
 
 - 定义一个 SwitchThreadContinuation
-```Kotlin
+```kotlin
 class SwitchThreadContinuation<T>(val continuation: Continuation<T>) : Continuation<T>{
 	override val context: CoroutineContext
         get() = continuation.context
@@ -310,7 +310,7 @@ class SwitchThreadContinuation<T>(val continuation: Continuation<T>) : Continuat
 这我们的协程中就有了两个 Continuation，那么编译器可不知道什么时候用哪个 Continuation。所以我们还得做拦截分发工作：将我们的 AsyncContext 实现 ContinuationInterceptor 拦截器，并实现其 interceptContinuation() 函数，然后将 ContinuationInterceptor 作为 AsyncContext 的 Key
 
 - 实现 ContinuationInterceptor 拦截器
-```Kotlin
+```kotlin
 class AsyncContext : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
     /**
      * continuation : 我们原始的 Continuation
@@ -398,7 +398,10 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
 
 #### withContext(context){}
-不创建新的协程，在指定一个协程环境上运行可挂起代码块, 并将该协挂起，直到代码块运行完成, 不会阻塞当前线程。大多数场景都用来在协程内进行线程切换; 阻塞当前协程，不会阻塞当前线程
+
+withContext 不创建新的协程，可以在指定的 context 上执行， 阻塞当前协程， 不会阻塞当前线程
+
+withContext 中出现异常， 其他的挂起函数也会被取消， 异常会传递到父协程， 如果最近的父协程不捕获，则传递到再上传层传递点（比如外层的 withContext,继续按前面方式找）， 如果顶层也不捕获， 在判断是否存在 CoroutineExceptionHandler 来处理异常。 如果还是没有捕获， 最终会导致红色崩溃异常。
 
 ```kotlin
 // 必须有 suspend 关键字
@@ -410,15 +413,22 @@ fun fibBlocking(x: Int): Int = if (x <= 1) x else fibBlocking(x - 1) + fibBlocki
 ```
 
 #### coroutineScope{}
-作用类似 withContext ,区别在于 withContext 可以设置自定义 context, 而 coroutineScope 不行，coroutinesScope 使用的是当前父协程的 context; 阻塞当前协程，不会阻塞当前线程
+
+coroutineScope 中出现异常或错误，则会取消内部的其他还没执行完成的协程， 异常会传递到父协程， 如果父协程不捕获，继续向上传递，如果有 CoroutineExceptionHandler 则交给 CoroutineExceptionHandler， 没有就直接抛出红色崩溃异常
+
+coroutineScope 不创建新的协程， 不能设置自定义 context; 阻塞当前协程， 不会阻塞当前线程
+
 
 
 #### supervisorScope{}
-coroutineScope 和 supervisorScope 的区别是 ，前者如果内部的某一个子协程出现异常或错误，则会取消前者内部的其他所有子协程；后者则只取消出现错误的那个子协程，其它并行的子协程不受影响。
 
+supervisorScope 中出现异常不会影响并取消其他领域的协程，
 
-#### 协程作用域
-协程作用域或称结构化并发, 使用协程作用域来避免可能造成的内存泄露。其实主要就是在使用完协程后，应该在合适的地方取消协程任务和避免重复创建；所以我们在使用协程的时候应该考虑内存泄露或性能问题。
+supervisorScope 不会重新抛出异常（也就是其他协程内部出现异常，层层向上传递碰到 supervisorScope， supervisorScope 会直接抛出这个异常， 不会再继续向上传递）， 但对于自己领域内的直接异常则是将异常传递到自己的父协程， 父协程可以选择是否捕获异常， 如果父协程不捕获，继续向上传递，如果有 CoroutineExceptionHandler 则交给 CoroutineExceptionHandler， 没有就直接抛出红色崩溃异常
+
+### 异常总结
+withContext  coroutineScope  supervisorScope  这三个函数其实都是异常传递的关键点， 但他们对异常转发的方式是不一样的
+对于自己领域内的直接异常（看每个领域的是否是同一个上下文）， 这三个通常都会先传到父协程， 所以大多数情况， 我们可以使用 try catch 直接包住这 3个 就捕获到他们里面的异常
 
 
 ## 例子
@@ -430,7 +440,7 @@ suspend fun loadAndCombine（name1Url：String，name2Url：String）：Image =
         val deferred2 = async  { loadImage（name2Url）} 
         combineImages（deferred1.await（），deferred2.await（） ）
     }
-    // deferred1 和 deferred2 是并行处理的；这里和 coroutineScope 没有关系，coroutineScope 在这里只是为了假设任务1出现了异常，同时取消任务2 这个项目需要而定的.
+    // deferred1 和 deferred2 是并行处理的；这里和 coroutineScope 没有关系，coroutineScope 在这里只是为了假设任务1出现了异常，同时取消任务2 这个需要根据项目需要而定的.
 ```
 上面代码中 deferred2 有可能比 deferred1 现完成, 因为只有 async 的情况下不会阻塞当前协程(当调用 deferred2.await() 时就会阻塞当前协程 ), 所以这是并行的。await() 的调用位置很重要哦.
 

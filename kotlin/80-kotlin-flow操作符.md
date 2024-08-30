@@ -24,6 +24,12 @@ println(sum)
   更改上游 flow 的协程上下文环境，类似切换线程
 
 - buffer()
+
+- onStart
+  当上游 flow 开始的时候调用，还没向下游发送值的时候，可以用来做一些初始化操作
+
+- onEach
+  上游向下游发送的“每个值”之前，都会调用 onEach 里面的代码
   
   ```
   fun simple(): Flow<Int> = flow {
@@ -67,7 +73,7 @@ println(sum)
   将两个 flow 序列根据给定的逻辑（可以类型转换，类似map）合并成一个新的 flow 序列, 如果其中的一个 flow 生产很慢，那么另一个会等待这个生产慢的flow，然后再合并.
 
 - combine:
-  和 zip 类似， 不同的是，快的 flow 不会等待慢的 flow ，快的 flow 值会和慢flow 已经生成的最新值继续合并，最后传给 collect
+  和 zip 类似， 不同的是，快的 flow 不会等待慢的 flow ，快的 flow 值会和慢 flow 已经生成的最新值继续合并，最后传给 collect
 
 ## 扁平 Flow
 
@@ -81,7 +87,7 @@ println(sum)
   (当扁平的 '流1' 遇到需要等待的 emit （流B）时，会缓存扁平的 '流1' ，当 流B 等待时间到后再发送 流1B，在缓存等待的过程中被扁平的流会继续发送 '流2' )
 
 - flatMapLatest
-  先只执行不需要等待的 emit，当最后新的流发出，就取消对以前流的收集 （ 丢弃除了最后一个以外的所有等待 + 保证最后的一个流）
+  先执行不需要等待的 emit，当最后新的流发出，就取消对以前流的收集 （ 丢弃除了最后一个以外的所有等待 + 保证最后的一个流）
 
 ## 终端操作符
 
@@ -105,7 +111,7 @@ println(sum)
   只能捕获上游的异常，不能捕获下游的异常
 
 - 声明式捕获异常：
-  我们可以把 catch操作符 的声明性和处理所有异常的愿望结合起来，把 collect操作符 的主体移到 onEach中，这样 collect 就在 catch操作符 的上游。这个流程的必须通过调用不带参数的 collect() 来触发。
+  我们可以把 catch操作符 的声明性和处理所有异常的愿望结合起来，把 collect 操作符的中的代码移到 onEach中，这样 collect 就在 catch 操作符 的上游。这个流程的必须通过调用不带参数的 collect() 来触发。
   
   ```kotlin
   simple()
@@ -125,7 +131,7 @@ println(sum)
   不用写 emit 来发送流
 
 - onCompletion：
-  当收集完成后调用，我们还可以在 onCompletion 中判断异常情况，无论时上游异常还是下游异常，onCompletion 都能感知到，需要根据其参数来判断，如果参数不为空，说明最后完成是存在异常的，onCompletion 自身不捕获异常，所以我们应该再加上 .catch{} 来捕获异常
+  当收集完成后调用，我们还可以在 onCompletion 中判断异常情况，无论是上游异常还是下游异常，onCompletion 都能感知到，需要根据其参数来判断，如果参数不为空，说明最后完成是存在异常的，onCompletion 自身不捕获异常，所以我们应该再加上 .catch{} 来捕获异常
 
 - collect：
   收集流  （终端操作符）
@@ -151,7 +157,7 @@ println(sum)
   ```
 
 - callbackFlow:
-  将回调 api 转换成 Flow ，推荐在需要连续回调结果的情况下使用，如间隔性的实时定位回调，对于不需要重复性的单次回调请使用 suspendCancellableCoroutine 。
+  将回调转换成 Flow ，推荐在需要连续回调结果的情况下使用，如间隔性的实时定位回调，对于不需要重复性的单次回调请使用 suspendCancellableCoroutine 。
 
 ```kotlin
 fun flowFrom(api: CallbackBasedApi): Flow<T> = callbackFlow {
@@ -169,5 +175,5 @@ fun flowFrom(api: CallbackBasedApi): Flow<T> = callbackFlow {
     }
     api.register(callback)
     awaitClose { api.unregister(callback) }
-    }
+}
 ```

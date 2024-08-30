@@ -1,9 +1,9 @@
 inner join 内连接
 
-查询 student 表学生name所在 classes表中对应的班级name
+查询 student 表中的学生 name 所在 classes 表中对应的班级 name
 
 结果：条件符合时，得到 student 表 name + classes 表的 name 数据
-
+- inner join 内连接
 ```sql
 SELECT student.name, classes.name 
 FROM students // 表1
@@ -18,11 +18,12 @@ data class(
 )
 ```
 
-right outer join 右外连接
+- right outer join 右外连接
 
 结果:  student 表 name + classes 表的 name 数据 + class表不符合条件的行的name字段数据
 
-full outer join 全部连接
+
+- full outer join 全部连接
 
 根据条件查询所有表的数据，没有对应则以 null 填充
 

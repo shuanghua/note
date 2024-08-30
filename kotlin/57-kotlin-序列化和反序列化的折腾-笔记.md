@@ -40,7 +40,7 @@ data class Jake(
 
 当我们对 PersonWrapper 这个类做序列化的时候，非常的简单，new 出相关实例，然后使用相关序列化库序列化即可。因为是针对 Kotlin 代码的序列化，下面是我只用 MoShi 和 KS 序列化，主要是这两个对 Kotlin 支持更好。
 
-#### MoShi
+## MoShi
 
 ```groovy
 implementation 'com.squareup.moshi:moshi:1.8.0'
@@ -93,7 +93,7 @@ private fun testMoShi() {
 
 
 
-## KS
+## Kotlinx-Serialization
 
 ```groovy
 implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version" //kotlin 反射库

@@ -1,64 +1,120 @@
----
-toc: false
-comments: true
-title: Android 拍照返回-笔记
-description: Android 拍照返回-笔记
-tags:
-  - Android
-id: 38
-categories:
-  - Android
-date: 2018-6-26
----
 
----
-Android 拍照存储笔记
+# Android 拍照返回笔记
 
-<!-- more -->
+## Demo 代码
 
+[takephoto_sample](https://github.com/shuanghua/android-samples/tree/master/takephoto-sample/app/src/main/java/com/shuanghua/takephoto_sample)
 
 # 拍照
-```java
-    private File imgFile;
-	private String path;// 注意当前路径，为啥？下面讲到。
 
-    public void takePhotoBy8(int requestCode) {
-        File file = new File(path);
-        if (!file.exists()) {
-            file.mkdirs();
-        }
+## 打开系统相机
 
-        fileName = String.valueOf(System.currentTimeMillis()) + ".jpg";//文件的名字
-        imgFile = new File(path, fileName);//生成该文件的 File 对象
-        Uri imgUri;
-
-        if (Build.VERSION.SDK_INT < 24) {
-            imgUri = Uri.fromFile(imgFile);
-        } else {//Android 7.0 访问本地文件的方式有变化，变得更加安全。
-            // 注意：必须在 AndroidManifest.xml 添加对应的 provider，
-            // 这里的第二个参数必须和 AndroidManifest 中 provider里面的 authorities: = 一致
-            imgUri = FileProvider.getUriForFile(this, getPackageName(), imgFile);
-        }
-
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, imgUri);
-        startActivityForResult(intent, requestCode);
-    }
-```
-
-# 返回拍好的图片
-```java
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK) {
-            Bitmap bitmap = BitmapFactory.decodeFile(path + fileName);
-            //处理你的图片
+```kotlin
+fun AppCompatActivity.takePictureFromCameraSample(takePictureLauncher: ActivityResultLauncher<Uri>) {
+    val imgFile = File(externalCacheDir, "image_name.jpg")
+    if (imgFile.exists()) {
+        imgFile.delete()
+    } else {
+        try {
+            imgFile.createNewFile()
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
+    val imgUri = if (Build.VERSION.SDK_INT < 24) {
+        Uri.fromFile(imgFile) // file to uri
+    } else { // FileProvider
+        FileProvider.getUriForFile(
+            this,
+            // 这个字符串必须和清单文件中的 provider 的 authorities 一致, 只要一致随便改成什么都可以
+            "$packageName.fileProvider", // android:authorities="${applicationId}.fileProvider"
+            imgFile
+        )
+    }
+    // val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    // intent.putExtra(MediaStore.EXTRA_OUTPUT, imgUri) // 这会获取拍照的原图 (如不需要原图则将该行注释掉)
+    // startActivityForResult(intent, 100) // 启动相机拍照，(已经过时)
+    takePictureLauncher.launch(imgUri) // 启动相机拍照，并将图片保存到 uri
+}
 ```
 
-# AndroidManifest.xml
+## 处理拍好的图片
+
+```kotlin
+/**
+ * 通过 registerForActivityResult 打开系统相机 (替代 startActivityForResult 过时的处理方式)
+ */
+private val takePictureLauncher = registerForActivityResult(
+    ActivityResultContracts.TakePicture()
+) { result: Boolean -> // 接口回调，result 为拍照成功和失败
+    if (result) { // imageUri 指向的文件已经有图片了
+        //imageUri.let { imageView.setImageURI(it) }
+        //val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(imageUri))
+        val bitmap = optionsImg(imgUri) // 先压缩图片，再显示
+        imageView.setImageBitmap(bitmap)
+    }
+}
+```
+
+## 调用拍照方法
+
+```kotlin
+class MainActivityKotlin : AppCompatActivity() {
+
+    private lateinit var imgUri: Uri
+
+    private val takePictureLauncher = 
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { result: Boolean -> 
+            if (result) { // 接口回调，result 为拍照成功和失败
+                // imageUri.let { imageView.setImageURI(it) }
+                val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(imageUri))
+                imageView.setImageBitmap(bitmap)
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val button.setOnClickListener{
+            takePictureFromCameraSample(takePictureLauncher)
+        }
+    }
+}
+```
+
+完整代码：[takephoto_sample/MainActivityKotlin.kt](https://github.com/shuanghua/android-samples/blob/master/takephoto-sample/app/src/main/java/com/shuanghua/takephoto_sample/MainActivityKotlin.kt)
+
+# 相册选择图片
+
+## 打开系统相册
+
+```kotlin
+/**
+ * 从相册选择图片并监听选择的结果
+ */
+fun pickPictureFromGallery(pickPictureLauncher: ActivityResultLauncher<PickVisualMediaRequest>) {
+    //https://developer.android.com/training/data-storage/shared/photopicker?hl=zh-cn
+    val mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+//    val mediaType = ActivityResultContracts.PickVisualMedia.VideoOnly
+//    val mediaType = ActivityResultContracts.PickVisualMedia.ImageAndVideo
+//    val mediaType = ActivityResultContracts.PickVisualMedia.SingleMimeType("image/jpeg") // image/jpeg, image/png, image/gif, image/webp ,image/*
+    pickPictureLauncher.launch(PickVisualMediaRequest(mediaType)) // 启动相册选择，图片请在 pickPictureLauncher 的回调中获取
+}
+```
+
+## 处理选择的图片
+
+```kotlin
+private val pickPictureLauncher = registerForActivityResult(
+    ActivityResultContracts.PickVisualMedia()
+) { imgUri: Uri? ->
+    imgUri?.let { imageView.setImageURI(it) }
+}
+```
+
+# AndroidManifest
+
 ```xml
     <application
         android:allowBackup="true"
@@ -71,7 +127,7 @@ Android 拍照存储笔记
         <!--适配7.0+拍照返回 Start-->
         <provider
             android:name="android.support.v4.content.FileProvider"
-            android:authorities="${applicationId}"
+            android:authorities="${applicationId}.fileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -156,4 +212,3 @@ content://com.xxx.demo/BieMing/image/风景.jpg
 > 其中 com.xxx.demo 就是我们在 AndroidManifest.xml 中 authorities 的值。当 path = "." 时，点号代指的时根目录，也就是external-path
 
 
-#### Demo 代码：[https://gitee.com/shua17/AndroidTakePhotoReturn](https://gitee.com/shua17/AndroidTakePhotoReturn)

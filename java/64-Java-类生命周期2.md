@@ -1,5 +1,6 @@
 
-类的创建过程:
+# 类的创建过程
+
 加载-链接-初始化-main函数
 
 # 加载类
@@ -28,7 +29,7 @@
 
 # new 对象过程
 
-```
+```java
 class Super {
     Super() { printThree(); }
     void printThree() { System.out.println("three"); }

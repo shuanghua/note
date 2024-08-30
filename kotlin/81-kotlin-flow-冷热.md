@@ -1,6 +1,6 @@
 ## 热流
 
-流的实例会独立于收集器而存在, 当订阅者取消订阅，流也会存在，除非该实例被Gc回收了，StateFlow 和 SharedFlow 属于热流
+流的实例会独立于收集器而存在, 当订阅者取消订阅，流也会存在，除非该实例被 Gc 回收了，StateFlow 和 SharedFlow 属于热流
 
 ### SharedFlow
 
@@ -52,10 +52,10 @@ val name: Flow<List<Dog>> = flow {
 ```
 
 - SharingStarted.WhileSubscribed()
-  使上游生产方保持活跃状态
+  当存在订阅的时候才使上游生产方保持活跃状态
 
 - SharingStarted.Eagerly()
-  立即启动生产方
+  立即启动生产方，直接配发数据
 
 - SharingStarted.Lazily()
   可在第一个订阅者出现后开始共享数据，并使数据流永远保持活跃状态
@@ -64,7 +64,8 @@ val name: Flow<List<Dog>> = flow {
 
 ### StateFlow
 
-StateFlow 是一个状态容器式 + 可观察数据的流 ，StateFlow 在消费端只收集到初始值和最后一个值
+StateFlow 是一个状态容器 + 可观察数据的流 ，StateFlow 在消费端只收集到初始值和最后一个值
+我们可以给 StaeFlow设置一个初始值
 
 > SharedFlow 相比 StateFlow 可配置性更高
 
@@ -72,10 +73,10 @@ StateFlow 是一个状态容器式 + 可观察数据的流 ，StateFlow 在消�
 _uiState = MutableStateFlow(UiState.Success(emptyList()))
 ```
 
-在 Android 中，StateFlow 非常适合需要让可变状态保持可观察的类，可以是 Ui 状态也可以是请求网络数据的状态。
+在 Android 中，StateFlow 非常适合用来发送需要让可变状态保持可观察的类，可以是 Ui 状态也可以是请求网络数据的状态。
 
-StateFlow 和 LiveData 很像，内部都有一个 value 来更新数据，消费的一方和生产放都是相互独立的，
-LiveData 能自动根据 view 的生命周期来取消和绑定消费方； 
+StateFlow 和 LiveData 很像，内部都有一个 value 来更新数据，消费和生产都是相互独立的，
+LiveData 能自动根据 view 的生命周期来取消和绑定消费方
 StateFlow 的消费方只能放在 repeatOnLifecycle(Lifecycle.State.STARTED) 之类的感知块中来避免内存泄漏
 
 Flow 的另一个优点是其提供了很多处理数据的操作符。
