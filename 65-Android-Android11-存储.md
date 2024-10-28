@@ -22,11 +22,13 @@
 
 ### Android 5.0 --> Android 9.0
 
-对于 Android 9 及之前， 访问外部存储， 不管访问哪个文件夹都需要这读和写两个权限
+通过 File 类操作外部存储目录， 需要申请读写权限
 
 # Android 10 +
 
-以下内容只针对 Android 10+ 的 【分区存储】
+【分区存储】+ MediaStore + ContentResolver + Uri
+
+以下内容只针对 Android 10+
 
 ## 共享目录
 
@@ -39,17 +41,19 @@
 
 > Environment.DIRECTORY_PICTURES + "/" + "AppName"
 
-例如用户需要保存一张图片，希望这张图片能永久保存（无视应用卸载），同时还能在系统相册中显示，那么请选择 [共享目录] 保存。
+例如用户需要保存一张图片，希望这张图片能永久保存（无视应用卸载）， 同时还能在系统相册中显示，那么请选择 [共享目录] 保存。
+希望卸载应用，图片也被删除，那么请选择 [外部存储的应用私有目录] 保存。
+对于小的文件，需要考虑安全，请存储到[内部存储的应用私有目录]，注意内部存储会占用应用的运行内存，请谨慎使用。[内部存储的应用私有目录]的读写也更加高效
 
-#### 共享目录权限
+### 共享目录权限
 
 1. 默认情况下，自己应用读写共享目录下自己的文件是不需要任何权限
 2. 自己应用卸载重装后，访问共享目录过去的文件需要读权限
 3. 自己应用访问共享目录下别的应用保存的文件，需要读权限，并且不能修改别人的文件，你只能读取后写入成自己的文件特征（也就是属于自己的文件）
 
-> 从上面的第 3 点可以得出结论， 只对于 Android 10 + 其实只要读权限就行，不需要写权限， 当然为了兼容之前的版本， 还是需要在清单文件中添加读写权限。
+> 从上面的第 3 点可以得出结论， 只对于 Android 10 + 其实只要读权限就行，不需要写权限， 当然为了兼容之前的版本， 才需要在清单文件中添加读写权限。
 
-当你需要兼容Android 10 之前的代码，你需要添加 android:maxSdkVersion="28" 来限定写的权限只能在之前的版本有效
+当你需要兼容 Android 10 之前的代码， 你需要添加 android:maxSdkVersion="28" 来限定写的权限只能在之前的版本有效
 
 ```xml
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
@@ -115,7 +119,7 @@ fun saveImageToSharedPictures(
     values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
     values.put(MediaStore.MediaColumns.DISPLAY_NAME, imageName)
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { //  Q = api 29
         values.put(MediaStore.MediaColumns.RELATIVE_PATH, imageDir) // MediaStore 方式
     } else { // Q 之前的需要申请读和写的权限
         val dirFile = File(Environment.getExternalStoragePublicDirectory(shareDir), directory)
