@@ -87,7 +87,7 @@
  * 保存到共享目录 Pictures 下 （已适配全版本（
  *
  *  Android Q + 使用 MediaStore
- * Android Q 之前，请申请权限后使用 File
+ *  Android Q 之前，请申请权限后使用 File
  *
  * sdcard/Pictures/图片名.后缀
  *
@@ -191,3 +191,91 @@ fun getImageFromSharedPictures(activity: Activity, imageName: String): Bitmap? {
 当然， File 在操作专属目录的时候还是要用到的
 
 > 读取和写入的操作属于 IO 操作，应放在 io 线程中执行
+
+```
+Environment.getExternalStoragePublicDirectory()  // 外部存储的 公共目录
+context.getExternalFilesDir(DIRECTORY_DOWNLOADS) // 外部存储的 私有目录
+context.getFileDir() // 内部存储的私有目录
+```
+
+
+# 保存 zip 文件
+```kotlin
+/**
+ * sdcard/Download/zip文件名.zip
+ *
+ * sdcard/Download/应用名/zip文件名.zip
+ * @param zipFileName 文件的名字+格式
+ * @param directory 文件的目录（只需要一层目录，建议写自己应用的名字）
+ * @param mimeType  如 application/zip
+ * @param byteArray 文件的字节数组
+ * @return 保存成功后的zip文件路径 Uri
+ */
+fun saveZipFileToSharedDownloads(
+    context: Context,
+    zipFileName: String,
+    directory: String = context.getString(R.string.app_name),
+    mimeType: String?,
+    byteArray: ByteArray
+): Uri {
+    // 如果要保存到其它共享目录，可以修改这里的 DIRECTORY_DOWNLOADS
+    val shareDir = DIRECTORY_DOWNLOADS
+    val zipDir = shareDir + File.separator + directory
+
+    val resolver = context.applicationContext.contentResolver
+    val values = ContentValues()
+
+    values.put(MIME_TYPE, mimeType)
+    values.put(DISPLAY_NAME, zipFileName)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // MediaStore 方式 (需要大于或等于 AndroidQ = api29 = Android10)
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, imageDir) // MediaStore 方式
+    } else { // Q 之前的需要申请读和写的权限
+        val dirFile = File(Environment.getExternalStoragePublicDirectory(shareDir), directory)
+        if (!dirFile.exists()) {
+            dirFile.mkdirs() // 必须先创建第一层目录
+        }
+        val imageFile = File.createTempFile(imageName, suffix, dirFile) //然后创建全目录
+        values.put(MediaStore.Images.Media.DATA, imageFile.absolutePath)
+    }
+
+
+    // 注意这里是 MediaStore.Downloads.EXTERNAL_CONTENT_URI
+    val uri = checkNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values))
+    val outputStream = resolver.openOutputStream(uri) // 获取写出流
+    outputStream?.use { it.write(byteArray) } // 写入 byte array
+    return uri
+}
+```
+
+
+# 打印可用空间
+```kotlin
+val externalFilesDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+val externalSpace = getAvailableSpace(externalFilesDir)
+Log.d("", "外部存储私有目录可用空间：${formatSize(externalSpace)}")
+```
+
+```kotlin
+fun getAvailableSpace(dir: File?): Long {
+    return if (dir != null && dir.exists()) {
+        val statFs = StatFs(dir.path)
+        val availableBlocks = statFs.availableBlocks.toLong()
+        val blockSize = statFs.blockSize.toLong()
+        availableBlocks * blockSize
+    } else {
+        0L
+    }
+}
+fun formatSize(size: Long): String {
+    val kb = 1024L
+    val mb = kb * 1024L
+    val gb = mb * 1024L
+    return when {
+        size >= gb -> String.format("%.2f GB", size.toDouble() / gb)
+        size >= mb -> String.format("%.2f MB", size.toDouble() / mb)
+        size >= kb -> String.format("%.2f KB", size.toDouble() / kb)
+        else -> "$size B"
+    }
+}
+```
